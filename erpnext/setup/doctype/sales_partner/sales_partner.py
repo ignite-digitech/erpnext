@@ -66,8 +66,15 @@ class SalesPartner(WebsiteGenerator):
 			self.partner_website = urlunsplit(parts)
 
 	def get_context(self, context):
+<<<<<<< HEAD
 		address = frappe.db.get_value(
 			"Address", {"sales_partner": self.name, "is_primary_address": 1}, "*", as_dict=True
+=======
+		address_names = frappe.db.get_all(
+			"Dynamic Link",
+			filters={"link_doctype": "Sales Partner", "link_name": self.name, "parenttype": "Address"},
+			pluck="parent",
+>>>>>>> 55a346d (fix(sales-partner): render published partner addresses)
 		)
 		if address:
 			city_state = ", ".join(filter(None, [address.city, address.state]))
@@ -81,9 +88,15 @@ class SalesPartner(WebsiteGenerator):
 
 			context.update(
 				{
+<<<<<<< HEAD
 					"email": address.email_id,
 					"partner_address": filter_strip_join(address_rows, "\n<br>"),
 					"phone": filter_strip_join(cstr(address.phone).split(","), "\n<br>"),
+=======
+					"email": address_doc.email_id,
+					"partner_address": filter_strip_join(address_rows, "\n"),
+					"phone": filter_strip_join(cstr(address_doc.phone).split(","), "\n"),
+>>>>>>> 55a346d (fix(sales-partner): render published partner addresses)
 				}
 			)
 
