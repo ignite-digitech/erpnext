@@ -3988,7 +3988,23 @@ class TestSalesInvoice(FrappeTestCase):
 			self.assertEqual(invoice.status, "Overdue and Discounted")
 
 	def test_sales_commission(self):
+<<<<<<< HEAD
 		si = frappe.copy_doc(test_records[2])
+=======
+		si = frappe.copy_doc(self.globalTestRecords["Sales Invoice"][2])
+		si.sales_partner = (
+			frappe.get_doc(
+				{
+					"doctype": "Sales Partner",
+					"partner_name": "Test Invoice Commission " + frappe.generate_hash(length=10),
+					"territory": "All Territories",
+					"commission_rate": 0,
+				}
+			)
+			.insert()
+			.name
+		)
+>>>>>>> dc47ff9 (fix(selling): refresh commission when the sales partner changes)
 
 		frappe.db.set_value("Item", si.get("items")[0].item_code, "grant_commission", 1)
 		frappe.db.set_value("Item", si.get("items")[1].item_code, "grant_commission", 0)

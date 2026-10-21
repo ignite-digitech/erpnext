@@ -1376,8 +1376,12 @@
    "width": "50%"
   },
   {
+<<<<<<< HEAD
    "fetch_from": "sales_partner.commission_rate",
    "fetch_if_empty": 1,
+=======
+   "depends_on": "eval:doc.sales_partner",
+>>>>>>> dc47ff9 (fix(selling): refresh commission when the sales partner changes)
    "fieldname": "commission_rate",
    "fieldtype": "Float",
    "hide_days": 1,
