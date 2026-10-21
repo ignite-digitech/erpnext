@@ -75,11 +75,19 @@ erpnext.buying = {
 					});
 				}
 
+<<<<<<< HEAD
 				if(this.frm.fields_dict.tc_name) {
 					this.frm.set_query("tc_name", function() {
 						return{
 							filters: { 'buying': 1 }
 						}
+=======
+				if (this.frm.fields_dict.tc_name) {
+					this.frm.set_query("tc_name", function () {
+						return {
+							filters: { buying: 1, disabled: 0 },
+						};
+>>>>>>> ff80867 (fix(setup): enforce terms applicability on transactions and defaults)
 					});
 				}
 

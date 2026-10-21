@@ -9,6 +9,15 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt, getdate
 
+<<<<<<< HEAD
+=======
+from erpnext import get_company_currency
+from erpnext.accounts.services.taxes import validate_conversion_rate
+from erpnext.controllers.item_close import clear_closed_rows_on_amend, validate_parent_reopen
+from erpnext.controllers.status_updater import StatusUpdater
+from erpnext.manufacturing.doctype.blanket_order import blanket_order_pricing
+from erpnext.setup.doctype.terms_and_conditions.terms_and_conditions import validate_terms_and_conditions
+>>>>>>> ff80867 (fix(setup): enforce terms applicability on transactions and defaults)
 from erpnext.stock.doctype.item.item import get_item_defaults
 
 
@@ -41,6 +50,16 @@ class BlanketOrder(Document):
 	# end: auto-generated types
 
 	def validate(self):
+<<<<<<< HEAD
+=======
+		validate_terms_and_conditions(
+			self.get("tc_name"), "selling" if self.blanket_order_type == "Selling" else "buying"
+		)
+		if not self.blanket_order_type:
+			return
+
+		self.validate_party()
+>>>>>>> ff80867 (fix(setup): enforce terms applicability on transactions and defaults)
 		self.validate_dates()
 		self.validate_duplicate_items()
 		self.validate_item_qty()
