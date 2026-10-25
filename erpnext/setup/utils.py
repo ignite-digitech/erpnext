@@ -139,6 +139,14 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 		return rate
 >>>>>>> 5baa5d5 (fix(currency-exchange): prefer the side-specific record on a date)
 
+	# no direct record: use the inverse of a record for the opposite direction
+	reverse_args = {"for_buying": "for_selling", "for_selling": "for_buying"}.get(args, args)
+	reverse_rate = get_stored_exchange_rate(
+		to_currency, from_currency, transaction_date, reverse_args, checkpoint_date
+	)
+	if reverse_rate:
+		return 1 / reverse_rate
+
 	if frappe.get_single_value("Currency Exchange Settings", "disabled"):
 		return 0.00
 
