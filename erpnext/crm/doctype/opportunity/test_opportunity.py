@@ -53,6 +53,23 @@ class TestOpportunity(unittest.TestCase):
 		opportunity_doc = make_opportunity(with_items=1, rate=1100, qty=2)
 		self.assertEqual(opportunity_doc.total, 2200)
 
+<<<<<<< HEAD
+=======
+	def test_foreign_currency_amounts(self):
+		rates = {"USD": 83.0, "EUR": 90.0}
+		with patch(
+			"erpnext.crm.doctype.opportunity.opportunity.get_exchange_rate",
+			side_effect=lambda from_currency, *args, **kwargs: rates[from_currency],
+		) as get_rate:
+			opp = make_opportunity(with_items=0, currency="USD", opportunity_amount=1000)
+			self.assertEqual(get_rate.call_args.args[3], "for_selling")
+			self.assertEqual((opp.conversion_rate, opp.base_opportunity_amount), (83.0, 83000.0))
+
+			opp.currency = "EUR"
+			opp.save()
+			self.assertEqual((opp.conversion_rate, opp.base_opportunity_amount), (90.0, 90000.0))
+
+>>>>>>> 52da108 (fix(currency-exchange): use buying or selling rate for all transaction types)
 	def test_disabled_customer_not_allowed(self):
 		frappe.db.set_value("Customer", "_Test Customer", "disabled", 1)
 

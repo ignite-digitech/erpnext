@@ -200,8 +200,15 @@ class Opportunity(TransactionBase, CRMNote):
 			self.conversion_rate = 1.0
 			return
 
+<<<<<<< HEAD
 		if not self.conversion_rate or self.conversion_rate == 1.0:
 			self.conversion_rate = get_exchange_rate(self.currency, company_currency, self.transaction_date)
+=======
+		if not self.conversion_rate or self.conversion_rate == 1.0 or self.is_currency_changed_alone():
+			self.conversion_rate = get_exchange_rate(
+				self.currency, company_currency, self.transaction_date, "for_selling"
+			)
+>>>>>>> 52da108 (fix(currency-exchange): use buying or selling rate for all transaction types)
 
 	def calculate_totals(self):
 		total = base_total = 0
