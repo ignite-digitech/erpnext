@@ -10,7 +10,17 @@ from frappe.exceptions import QueryDeadlockError, QueryTimeoutError
 from frappe.model.document import Document
 from frappe.query_builder import DocType, Interval, Tuple
 from frappe.query_builder.functions import CombineDatetime, IfNull, Max, Now
-from frappe.utils import add_days, cint, get_link_to_form, get_weekday, getdate, now, nowtime, to_timedelta
+from frappe.utils import (
+	add_days,
+	cint,
+	get_datetime,
+	get_link_to_form,
+	get_weekday,
+	getdate,
+	now,
+	nowtime,
+	to_timedelta,
+)
 from frappe.utils.user import get_users_with_role
 from rq.timeouts import JobTimeoutException
 
@@ -451,21 +461,22 @@ class RepostItemValuation(Document):
 			"repost_started_at": self.get_repost_started_at(),
 		}
 
-		frappe.db.sql(
-			"""
-			update `tabRepost Item Valuation`
-			set status = 'Skipped'
-			WHERE item_code = %(item_code)s
-				and warehouse = %(warehouse)s
-				and name != %(name)s
-				and TIMESTAMP(posting_date, posting_time) > TIMESTAMP(%(posting_date)s, %(posting_time)s)
-				and docstatus = 1
-				and status = 'Queued'
-				and based_on = 'Item and Warehouse'
-				and creation <= %(repost_started_at)s
-				""",
-			filters,
-		)
+		repost = DocType("Repost Item Valuation")
+		(
+			frappe.qb.update(repost)
+			.set(repost.status, "Skipped")
+			.where(repost.item_code == filters["item_code"])
+			.where(repost.warehouse == filters["warehouse"])
+			.where(repost.name != filters["name"])
+			.where(
+				CombineDatetime(repost.posting_date, repost.posting_time)
+				> get_datetime(f"{filters['posting_date']} {filters['posting_time']}")
+			)
+			.where(repost.docstatus == 1)
+			.where(repost.status == "Queued")
+			.where(repost.based_on == "Item and Warehouse")
+			.where(repost.creation <= filters["repost_started_at"])
+		).run()
 
 	def get_repost_started_at(self):
 		return self.flags.repost_started_at or now()

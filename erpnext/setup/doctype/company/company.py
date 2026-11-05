@@ -1067,12 +1067,12 @@ def get_all_transactions_annual_history(company):
 		where
 			company=%s
 			and
-			transaction_date > date_sub(curdate(), interval 1 year)
+			transaction_date > %s
 
 		group by
 			transaction_date
 			""",
-		(company),
+		(company, frappe.utils.add_years(frappe.utils.nowdate(), -1)),
 		as_dict=True,
 	)
 

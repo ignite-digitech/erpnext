@@ -267,8 +267,8 @@ def item_query(
 		columns += ", " + ", ".join(extra_searchfields)
 
 	if "description" in searchfields:
-		columns += """, if(length(tabItem.description) > 40, \
-			concat(substr(tabItem.description, 1, 40), "..."), description) as description"""
+		columns += """, case when length(`tabItem`.description) > 40 then
+			concat(substr(`tabItem`.description, 1, 40), '...') else description end as description"""
 
 	searchfields = searchfields + [
 		field
@@ -281,7 +281,7 @@ def item_query(
 		if field not in searchfields
 	]
 	searched_fields = list(searchfields)
-	searchfields = " or ".join([field + " like %(txt)s" for field in searchfields])
+	searchfields = " or ".join([f"lower({field}) like lower(%(txt)s)" for field in searchfields])
 
 	allowed_items_cond = ""
 	if filters and isinstance(filters, dict):
@@ -308,7 +308,7 @@ def item_query(
 	description_cond = ""
 	if frappe.db.estimate_count(doctype) < 50000:
 		# scan description only if items are less than 50000
-		description_cond = "or tabItem.description LIKE %(txt)s"
+		description_cond = "or lower(`tabItem`.description) like lower(%(txt)s)"
 		searched_fields.append("description")
 
 	candidate_cond = ""
@@ -317,26 +317,26 @@ def item_query(
 		if not candidates:
 			return [] if as_dict else ()
 
-		candidate_cond = "and tabItem.name in %(candidates)s"
+		candidate_cond = "and `tabItem`.name in %(candidates)s"
 
 	# nosemgrep: frappe-semgrep-rules.rules.security.frappe-sql-format-injection
 	return frappe.db.sql(
 		"""select
-			tabItem.name {columns}
-		from tabItem
-		where tabItem.docstatus < 2
-			and tabItem.disabled=0
-			and tabItem.has_variants=0
-			and (tabItem.end_of_life > %(today)s or ifnull(tabItem.end_of_life, '0000-00-00')='0000-00-00')
-			and ({scond} or tabItem.item_code IN (select parent from `tabItem Barcode` where barcode LIKE %(txt)s)
+			`tabItem`.name {columns}
+		from `tabItem`
+		where `tabItem`.docstatus < 2
+			and `tabItem`.disabled=0
+			and `tabItem`.has_variants=0
+			and (`tabItem`.end_of_life > %(today)s or `tabItem`.end_of_life is null)
+			and ({scond} or `tabItem`.item_code IN (select parent from `tabItem Barcode` where lower(barcode) like lower(%(txt)s))
 				{description_cond})
 			{fcond} {mcond} {candidate_cond} {allowed_items_cond} {company_cond}
 		order by
-			if(locate(%(_txt)s, name), locate(%(_txt)s, name), 99999),
-			if(locate(%(_txt)s, item_name), locate(%(_txt)s, item_name), 99999),
+			coalesce(nullif(locate(%(_txt)s, name), 0), 99999),
+			coalesce(nullif(locate(%(_txt)s, item_name), 0), 99999),
 			idx desc,
 			name, item_name
-		limit %(start)s, %(page_len)s """.format(
+		limit %(page_len)s offset %(start)s """.format(
 			columns=columns,
 			scond=searchfields,
 			fcond=get_filters_cond(doctype, filters, conditions).replace("%", "%%"),
