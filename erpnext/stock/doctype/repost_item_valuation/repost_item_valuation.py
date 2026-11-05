@@ -10,7 +10,7 @@ from frappe.exceptions import QueryDeadlockError, QueryTimeoutError
 from frappe.model.document import Document
 from frappe.query_builder import DocType, Interval
 from frappe.query_builder.functions import CombineDatetime, Max, Now
-from frappe.utils import cint, get_link_to_form, get_weekday, getdate, now, nowtime
+from frappe.utils import cint, get_datetime, get_link_to_form, get_weekday, getdate, now, nowtime
 from frappe.utils.user import get_users_with_role
 from rq.timeouts import JobTimeoutException
 
@@ -348,20 +348,21 @@ class RepostItemValuation(Document):
 			"posting_time": self.posting_time,
 		}
 
-		frappe.db.sql(
-			"""
-			update `tabRepost Item Valuation`
-			set status = 'Skipped'
-			WHERE item_code = %(item_code)s
-				and warehouse = %(warehouse)s
-				and name != %(name)s
-				and TIMESTAMP(posting_date, posting_time) > TIMESTAMP(%(posting_date)s, %(posting_time)s)
-				and docstatus = 1
-				and status = 'Queued'
-				and based_on = 'Item and Warehouse'
-				""",
-			filters,
-		)
+		repost = DocType("Repost Item Valuation")
+		(
+			frappe.qb.update(repost)
+			.set(repost.status, "Skipped")
+			.where(repost.item_code == filters["item_code"])
+			.where(repost.warehouse == filters["warehouse"])
+			.where(repost.name != filters["name"])
+			.where(
+				CombineDatetime(repost.posting_date, repost.posting_time)
+				> get_datetime(f"{filters['posting_date']} {filters['posting_time']}")
+			)
+			.where(repost.docstatus == 1)
+			.where(repost.status == "Queued")
+			.where(repost.based_on == "Item and Warehouse")
+		).run()
 
 	def _recalculate_valuation_rate(self):
 		doc = frappe.get_doc(self.voucher_type, self.voucher_no)

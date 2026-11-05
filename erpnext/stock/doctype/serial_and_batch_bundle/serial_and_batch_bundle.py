@@ -12,7 +12,7 @@ from frappe import _, _dict, bold
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.permissions import get_user_permissions
-from frappe.query_builder.functions import Abs, Concat_ws, Sum
+from frappe.query_builder.functions import Abs, Concat_ws, Max, Sum
 from frappe.utils import (
 	cint,
 	cstr,
@@ -3414,7 +3414,7 @@ def get_available_batches(kwargs):
 		)
 		.where(batch_table.disabled == 0)
 		.where(stock_ledger_entry.is_cancelled == 0)
-		.groupby(batch_ledger.batch_no, batch_ledger.warehouse)
+		.groupby(batch_table.name, batch_ledger.batch_no, batch_ledger.warehouse)
 	)
 
 	if kwargs.get("company"):
@@ -3738,13 +3738,13 @@ def get_stock_ledgers_batches(kwargs):
 		.on(stock_ledger_entry.batch_no == batch_table.name)
 		.select(
 			stock_ledger_entry.warehouse,
-			stock_ledger_entry.item_code,
+			Max(stock_ledger_entry.item_code).as_("item_code"),
 			Sum(stock_ledger_entry.actual_qty).as_("qty"),
 			stock_ledger_entry.batch_no,
 			batch_table.expiry_date,
 		)
 		.where((stock_ledger_entry.is_cancelled == 0) & (stock_ledger_entry.batch_no.isnotnull()))
-		.groupby(stock_ledger_entry.batch_no, stock_ledger_entry.warehouse)
+		.groupby(batch_table.name, stock_ledger_entry.batch_no, stock_ledger_entry.warehouse)
 	)
 
 	if kwargs.get("company"):

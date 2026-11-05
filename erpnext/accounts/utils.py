@@ -1226,7 +1226,7 @@ def get_held_invoices(party_type, party):
 
 	if party_type == "Supplier":
 		held_invoices = frappe.db.sql(
-			"select name from `tabPurchase Invoice` where on_hold = 1 and release_date IS NOT NULL and release_date > CURDATE()",
+			"select name from `tabPurchase Invoice` where on_hold = 1 and release_date IS NOT NULL and release_date > CURRENT_DATE",
 			as_dict=1,
 		)
 		held_invoices = set(d["name"] for d in held_invoices)
@@ -1761,7 +1761,6 @@ def get_future_stock_vouchers(posting_date, posting_time, for_warehouses=None, f
 	query = (
 		frappe.qb.from_(SLE)
 		.select(SLE.voucher_type, SLE.voucher_no)
-		.distinct()
 		.where(SLE.posting_datetime >= posting_datetime)
 		.where(SLE.is_cancelled == 0)
 		.orderby(SLE.posting_datetime)
@@ -1780,7 +1779,8 @@ def get_future_stock_vouchers(posting_date, posting_time, for_warehouses=None, f
 
 	future_stock_vouchers = query.run(as_dict=True)
 
-	return [(d.voucher_type, d.voucher_no) for d in future_stock_vouchers]
+	# Distinct here, not in SQL: PostgreSQL can't sort or lock a distinct query on columns it doesn't select.
+	return list(dict.fromkeys((d.voucher_type, d.voucher_no) for d in future_stock_vouchers))
 
 
 def get_voucherwise_gl_entries(future_stock_vouchers, posting_date):
@@ -2223,7 +2223,7 @@ def delink_original_entry(pl_entry, partial_cancel=False):
 			qb.update(ple)
 			.set(ple.modified, now())
 			.set(ple.modified_by, frappe.session.user)
-			.set(ple.delinked, True)
+			.set(ple.delinked, 1)
 			.where(
 				(ple.company == pl_entry.company)
 				& (ple.account_type == pl_entry.account_type)
@@ -2339,7 +2339,7 @@ class QueryPaymentLedger:
 				.where(Criterion.all(self.voucher_posting_date))
 				.groupby(ple.against_voucher_type, ple.against_voucher_no, ple.party_type, ple.party)
 				.orderby(ple.invoice_date, ple.voucher_no)
-				.having(qb.Field("amount_in_account_currency") > 0)
+				.having(Sum(ple.amount_in_account_currency) > 0)
 				.limit(self.limit)
 				.run()
 			)
@@ -2353,18 +2353,18 @@ class QueryPaymentLedger:
 		query_voucher_amount = (
 			qb.from_(ple)
 			.select(
-				ple.account,
+				Max(ple.account).as_("account"),
 				ple.voucher_type,
 				ple.voucher_no,
 				ple.party_type,
 				ple.party,
-				ple.posting_date,
-				ple.due_date,
-				ple.account_currency.as_("currency"),
-				ple.cost_center.as_("cost_center"),
+				Max(ple.posting_date).as_("posting_date"),
+				Max(ple.due_date).as_("due_date"),
+				Max(ple.account_currency).as_("currency"),
+				Max(ple.cost_center).as_("cost_center"),
 				Sum(ple.amount).as_("amount"),
 				Sum(ple.amount_in_account_currency).as_("amount_in_account_currency"),
-				ple.remarks,
+				Max(ple.remarks).as_("remarks"),
 			)
 			.where(ple.delinked == 0)
 			.where(Criterion.all(filter_on_voucher_no))
@@ -2378,14 +2378,14 @@ class QueryPaymentLedger:
 		query_voucher_outstanding = (
 			qb.from_(ple)
 			.select(
-				ple.account,
+				Max(ple.account).as_("account"),
 				ple.against_voucher_type.as_("voucher_type"),
 				ple.against_voucher_no.as_("voucher_no"),
 				ple.party_type,
 				ple.party,
-				ple.posting_date,
-				ple.due_date,
-				ple.account_currency.as_("currency"),
+				Max(ple.posting_date).as_("posting_date"),
+				Max(ple.due_date).as_("due_date"),
+				Max(ple.account_currency).as_("currency"),
 				Sum(ple.amount).as_("amount"),
 				Sum(ple.amount_in_account_currency).as_("amount_in_account_currency"),
 			)
@@ -2436,15 +2436,15 @@ class QueryPaymentLedger:
 		# only fetch invoices
 		if self.get_invoices:
 			self.cte_query_voucher_amount_and_outstanding = (
-				self.cte_query_voucher_amount_and_outstanding.having(
-					qb.Field("outstanding_in_account_currency") > 0
+				self.cte_query_voucher_amount_and_outstanding.where(
+					Table("outstanding").amount_in_account_currency > 0
 				)
 			)
 		# only fetch payments
 		elif self.get_payments:
 			self.cte_query_voucher_amount_and_outstanding = (
-				self.cte_query_voucher_amount_and_outstanding.having(
-					qb.Field("outstanding_in_account_currency") < 0
+				self.cte_query_voucher_amount_and_outstanding.where(
+					Table("outstanding").amount_in_account_currency < 0
 				)
 			)
 

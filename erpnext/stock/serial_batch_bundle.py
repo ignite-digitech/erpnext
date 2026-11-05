@@ -965,13 +965,8 @@ class BatchNoValuation(DeprecatedBatchNoValuation):
 
 			timestamp_condition |= (child.posting_datetime == self.sle.posting_datetime) & tie_condition
 
-		query = (
+		rows = (
 			frappe.qb.from_(child)
-			.select(
-				child.batch_no,
-				Sum(child.stock_value_difference).as_("incoming_rate"),
-				Sum(child.qty).as_("qty"),
-			)
 			.where(
 				(child.item_code == self.sle.item_code)
 				& (child.warehouse == self.sle.warehouse)
@@ -980,22 +975,32 @@ class BatchNoValuation(DeprecatedBatchNoValuation):
 				& (child.is_cancelled == 0)
 				& (child.type_of_transaction.isin(["Inward", "Outward"]))
 			)
-			.for_update()
-			.groupby(child.batch_no)
 		)
 
 		# Important to exclude the current voucher detail no / voucher no to calculate the correct stock value difference
 		if self.sle.voucher_detail_no:
-			query = query.where(child.voucher_detail_no != self.sle.voucher_detail_no)
+			rows = rows.where(child.voucher_detail_no != self.sle.voucher_detail_no)
 		elif self.sle.voucher_no:
-			query = query.where(child.voucher_no != self.sle.voucher_no)
+			rows = rows.where(child.voucher_no != self.sle.voucher_no)
 
-		query = query.where(child.voucher_type != "Pick List")
+		rows = rows.where(child.voucher_type != "Pick List")
 		if timestamp_condition:
-			query = query.where(timestamp_condition)
+			rows = rows.where(timestamp_condition)
 
 		if self.stock_closing_from_datetime:
-			query = query.where(child.posting_datetime >= self.stock_closing_from_datetime)
+			rows = rows.where(child.posting_datetime >= self.stock_closing_from_datetime)
+
+		query = rows.select(
+			child.batch_no,
+			Sum(child.stock_value_difference).as_("incoming_rate"),
+			Sum(child.qty).as_("qty"),
+		).groupby(child.batch_no)
+
+		# PostgreSQL can't lock rows and group them in one statement, so it locks them first.
+		if frappe.db.db_type == "postgres":
+			rows.select(child.name).for_update().run()
+		else:
+			query = query.for_update()
 
 		return query.run(as_dict=True)
 
