@@ -36,6 +36,13 @@ def clear_logs_with_references(doctype, filters):
 		frappe.db.delete(doctype, {"name": ("in", batch)})
 
 
+def is_blank_date(field):
+	"""Whether a date column is empty. Only MariaDB accepts the zero date, which old rows may hold."""
+	if frappe.db.db_type == "mariadb":
+		return field.isnull() | (field == "0000-00-00")
+	return field.isnull()
+
+
 def update_doctypes():
 	for d in frappe.db.sql(
 		"""select df.parent, df.fieldname

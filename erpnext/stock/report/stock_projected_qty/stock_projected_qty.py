@@ -13,6 +13,7 @@ from erpnext.stock.utils import (
 	is_reposting_item_valuation_in_progress,
 	update_included_uom_in_report,
 )
+from erpnext.utilities import is_blank_date
 
 
 def execute(filters=None):
@@ -298,11 +299,7 @@ def get_item_map(item_code, include_uom):
 		.where(
 			(item.is_stock_item == 1)
 			& (item.disabled == 0)
-			& (
-				(item.end_of_life > today())
-				| (item.end_of_life.isnull())
-				| (item.end_of_life == "0000-00-00")
-			)
+			& ((item.end_of_life > today()) | is_blank_date(item.end_of_life))
 			& (ExistsCriterion(frappe.qb.from_(bin).select(bin.name).where(bin.item_code == item.name)))
 		)
 	)

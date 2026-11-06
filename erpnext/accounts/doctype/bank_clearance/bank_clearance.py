@@ -7,11 +7,12 @@ from frappe import _, msgprint
 from frappe.model.document import Document
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Coalesce, Sum
+from frappe.query_builder.functions import Coalesce, Max, Sum
 from frappe.utils import cint, flt, fmt_money, getdate
 from pypika import Order
 
 import erpnext
+from erpnext.utilities import is_blank_date
 
 form_grid_templates = {"journal_entries": "templates/form_grid/bank_reconciliation_grid.html"}
 
@@ -273,9 +274,9 @@ def get_payment_entries_for_bank_clearance(
 			Sum(journal_entry_account.debit_in_account_currency).as_("debit"),
 			Sum(journal_entry_account.credit_in_account_currency).as_("credit"),
 			journal_entry.posting_date,
-			journal_entry_account.against_account,
+			Max(journal_entry_account.against_account).as_("against_account"),
 			journal_entry.clearance_date,
-			journal_entry_account.account_currency,
+			Max(journal_entry_account.account_currency).as_("account_currency"),
 		)
 		.where(
 			(journal_entry_account.account == account)
@@ -288,7 +289,7 @@ def get_payment_entries_for_bank_clearance(
 
 	if not include_reconciled_entries:
 		journal_entry_query = journal_entry_query.where(
-			(journal_entry.clearance_date.isnull()) | (journal_entry.clearance_date == "0000-00-00")
+			is_blank_date(journal_entry.clearance_date)
 		)
 
 	journal_entries = (
@@ -363,7 +364,7 @@ def get_payment_entries_for_bank_clearance(
 
 	if not include_reconciled_entries:
 		payment_entry_query = payment_entry_query.where(
-			(pe.clearance_date.isnull()) | (pe.clearance_date == "0000-00-00")
+			is_blank_date(pe.clearance_date)
 		)
 
 	payment_entries = (payment_entry_query.orderby(pe.posting_date).orderby(pe.name, order=Order.desc)).run(
@@ -406,7 +407,7 @@ def get_payment_entries_for_bank_clearance(
 
 	if not include_reconciled_entries:
 		paid_purchase_invoices_query = paid_purchase_invoices_query.where(
-			(pi.clearance_date.isnull()) | (pi.clearance_date == "0000-00-00")
+			is_blank_date(pi.clearance_date)
 		)
 
 	paid_purchase_invoices = (
@@ -452,7 +453,7 @@ def get_payment_entries_for_bank_clearance(
 
 		if not include_reconciled_entries:
 			pos_sales_invoices_query = pos_sales_invoices_query.where(
-				(si_payment.clearance_date.isnull()) | (si_payment.clearance_date == "0000-00-00")
+				is_blank_date(si_payment.clearance_date)
 			)
 
 		pos_sales_invoices = (

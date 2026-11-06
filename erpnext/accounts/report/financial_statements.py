@@ -708,7 +708,9 @@ def get_accounting_entries(
 			gl_entry.credit_in_account_currency
 			if not group_by_account
 			else Sum(gl_entry.credit_in_account_currency).as_("credit_in_account_currency"),
-			gl_entry.account_currency,
+			gl_entry.account_currency
+			if not group_by_account
+			else Max(gl_entry.account_currency).as_("account_currency"),
 		)
 		.where(gl_entry.company == filters.company)
 	)
@@ -730,15 +732,24 @@ def get_accounting_entries(
 	ignore_is_opening = frappe.get_single_value("Accounts Settings", "ignore_is_opening_check_for_reporting")
 
 	if doctype == "GL Entry":
-		query = query.select(gl_entry.posting_date, gl_entry.is_opening, gl_entry.fiscal_year)
+		if group_by_account:
+			query = query.select(
+				Max(gl_entry.posting_date).as_("posting_date"),
+				Max(gl_entry.is_opening).as_("is_opening"),
+				Max(gl_entry.fiscal_year).as_("fiscal_year"),
+			)
+		else:
+			query = query.select(gl_entry.posting_date, gl_entry.is_opening, gl_entry.fiscal_year)
 		query = query.where(gl_entry.is_cancelled == 0)
 		query = query.where(gl_entry.posting_date <= to_date)
-		query = query.force_index("posting_date_company_index")
+		if frappe.db.db_type == "mariadb":
+			query = query.force_index("posting_date_company_index")
 
 		if ignore_opening_entries and not ignore_is_opening:
 			query = query.where(gl_entry.is_opening == "No")
 	else:
-		query = query.select(gl_entry.closing_date.as_("posting_date"))
+		closing_date = Max(gl_entry.closing_date) if group_by_account else gl_entry.closing_date
+		query = query.select(closing_date.as_("posting_date"))
 		query = query.where(gl_entry.period_closing_voucher == period_closing_voucher)
 
 	query = apply_additional_conditions(doctype, query, from_date, ignore_closing_entries, filters)
