@@ -10,6 +10,7 @@ from frappe import _
 from frappe.utils import add_days, cint, escape_html, flt, nowdate
 
 import erpnext
+from erpnext.utilities import is_blank_date
 
 
 def reorder_item():
@@ -139,11 +140,7 @@ def get_items_for_reorder() -> dict[str, list]:
 		.where(
 			(item_table.disabled == 0)
 			& (item_table.is_stock_item == 1)
-			& (
-				(item_table.end_of_life.isnull())
-				| (item_table.end_of_life > nowdate())
-				| (item_table.end_of_life == "0000-00-00")
-			)
+			& ((item_table.end_of_life > nowdate()) | is_blank_date(item_table.end_of_life))
 		)
 	)
 
@@ -169,11 +166,7 @@ def get_reorder_levels_for_variants(itemwise_reorder):
 		.where(
 			(item_table.disabled == 0)
 			& (item_table.is_stock_item == 1)
-			& (
-				(item_table.end_of_life.isnull())
-				| (item_table.end_of_life > nowdate())
-				| (item_table.end_of_life == "0000-00-00")
-			)
+			& ((item_table.end_of_life > nowdate()) | is_blank_date(item_table.end_of_life))
 			& (item_table.variant_of.notnull())
 		)
 	)

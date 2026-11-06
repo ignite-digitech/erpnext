@@ -4,7 +4,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import Max, Sum
 from frappe.utils import add_days, cstr, flt, formatdate, getdate
 
 import erpnext
@@ -240,7 +240,7 @@ def get_opening_balance(
 		frappe.qb.from_(closing_balance)
 		.select(
 			closing_balance.account,
-			closing_balance.account_currency,
+			Max(closing_balance.account_currency).as_("account_currency"),
 			Sum(closing_balance.debit).as_("debit"),
 			Sum(closing_balance.credit).as_("credit"),
 			Sum(closing_balance.debit_in_account_currency).as_("debit_in_account_currency"),

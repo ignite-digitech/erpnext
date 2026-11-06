@@ -9,6 +9,13 @@ from frappe.utils import cstr
 from erpnext.utilities.activation import get_level
 
 
+def is_blank_date(field):
+	"""Whether a date column is empty. Only MariaDB accepts the zero date, which old rows may hold."""
+	if frappe.db.db_type == "mariadb":
+		return field.isnull() | (field == "0000-00-00")
+	return field.isnull()
+
+
 def update_doctypes():
 	for d in frappe.db.sql(
 		"""select df.parent, df.fieldname
