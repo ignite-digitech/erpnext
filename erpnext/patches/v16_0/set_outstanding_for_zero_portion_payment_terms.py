@@ -9,13 +9,17 @@ def execute():
 		settled = ps.paid_amount + ps.discounted_amount
 		outstanding = ps.payment_amount - settled
 
-		(
-			frappe.qb.update(ps)
+		# Select, then update by name: UPDATE ... JOIN is MariaDB-only, and PostgreSQL rejects it.
+		rows = (
+			frappe.qb.from_(ps)
 			.join(parent)
 			.on(ps.parent == parent.name)
-			.set(ps.outstanding, outstanding)
-			.set(ps.base_payment_amount, ps.payment_amount * parent.conversion_rate)
-			.set(ps.base_outstanding, outstanding * parent.conversion_rate)
+			.select(
+				ps.name,
+				outstanding.as_("outstanding"),
+				(ps.payment_amount * parent.conversion_rate).as_("base_payment_amount"),
+				(outstanding * parent.conversion_rate).as_("base_outstanding"),
+			)
 			.where(
 				(ps.parenttype == parenttype)
 				& (parent.docstatus == 1)
@@ -23,4 +27,8 @@ def execute():
 				& (ps.outstanding == 0)
 				& (settled < ps.payment_amount)
 			)
-		).run()
+		).run(as_dict=True)
+
+		for row in rows:
+			name = row.pop("name")
+			frappe.db.set_value("Payment Schedule", name, row, update_modified=False)
