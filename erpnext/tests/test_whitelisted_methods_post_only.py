@@ -50,7 +50,6 @@ POST_ONLY_METHODS = (
 	"erpnext.support.doctype.issue.issue.Issue.split_issue",
 	"erpnext.support.doctype.issue.issue.make_issue_from_communication",
 	"erpnext.support.doctype.service_level_agreement.service_level_agreement.reset_service_level_agreement",
-	"erpnext.telephony.doctype.call_log.call_log.add_call_summary_and_call_type",
 )
 
 
