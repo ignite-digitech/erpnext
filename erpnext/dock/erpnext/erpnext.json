@@ -71,14 +71,6 @@
   },
   {
    "added": 0,
-   "hidden": 0,
-   "icon": "quality-seal-soft",
-   "link_to": "Quality",
-   "link_type": "Sidebar",
-   "title": "Quality"
-  },
-  {
-   "added": 0,
    "hidden": 1,
    "icon": "handshake-soft",
    "link_to": "CRM",

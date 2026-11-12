@@ -40,9 +40,9 @@ code_only_modules = {
 	# Its records are country-specific tax settings and returns, so they sit with the rest of the
 	# tax setup and reports in Accounts.
 	"Regional": ["Accounts"],
-	# Maintenance schedules and visits are after-sales upkeep of what was sold, so they live in a
-	# Maintenance section of the Quality sidebar.
-	"Maintenance": ["Quality Management"],
+	# Maintenance schedules and visits lived in the Quality sidebar, which the Clinic360 fork removes with
+	# Quality Management. Maintenance stays code-only, without navigation.
+	"Maintenance": [],
 }
 
 develop_version = "15.x.x-develop"
@@ -520,7 +520,6 @@ scheduler_events = {
 		"erpnext.crm.doctype.contract.contract.update_status_for_contracts",
 		"erpnext.projects.doctype.project.project.update_project_sales_billing",
 		"erpnext.projects.doctype.project.project.send_project_status_email_to_users",
-		"erpnext.quality_management.doctype.quality_review.quality_review.review",
 		"erpnext.support.doctype.service_level_agreement.service_level_agreement.check_agreement_status",
 		"erpnext.crm.doctype.email_campaign.email_campaign.send_email_to_leads_or_contacts",
 		"erpnext.crm.doctype.email_campaign.email_campaign.set_email_campaign_status",

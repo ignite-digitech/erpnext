@@ -33,7 +33,6 @@ POST_ONLY_METHODS = (
 	"erpnext.projects.doctype.task.task.set_multiple_status",
 	"erpnext.projects.doctype.task.task.add_node",
 	"erpnext.projects.doctype.task.task.add_multiple_tasks",
-	"erpnext.quality_management.doctype.quality_procedure.quality_procedure.add_node",
 	"erpnext.selling.doctype.customer.customer.Customer.get_customer_group_details",
 	"erpnext.selling.doctype.sales_order.sales_order.make_work_orders",
 	"erpnext.selling.page.point_of_sale.point_of_sale.set_customer_info",

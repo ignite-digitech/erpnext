@@ -13,6 +13,5 @@ Portal
 Maintenance
 Regional
 ERPNext Integrations
-Quality Management
 Bulk Transaction
 Subcontracting
