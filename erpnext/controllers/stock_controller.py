@@ -8,7 +8,7 @@ import frappe
 from frappe import _, bold
 from frappe.model.utils.mask import mask_dict_results
 from frappe.query_builder import Criterion
-from frappe.query_builder.functions import Count, Sum
+from frappe.query_builder.functions import Count, Max, Sum
 from frappe.utils import cint, cstr, flt, get_link_to_form, getdate
 
 import erpnext
@@ -1326,7 +1326,7 @@ class StockController(AccountsController):
 			lcv_item = frappe.qb.DocType("Landed Cost Item")
 			query = (
 				frappe.qb.from_(lcv_item)
-				.select(Sum(lcv_item.applicable_charges), lcv_item.cost_center)
+				.select(Sum(lcv_item.applicable_charges), Max(lcv_item.cost_center))  # PostgreSQL: no bare column beside an aggregate
 				.where((lcv_item.docstatus == 1) & (lcv_item.receipt_document == self.name))
 			)
 

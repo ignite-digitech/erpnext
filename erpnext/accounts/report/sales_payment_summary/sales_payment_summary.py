@@ -123,36 +123,36 @@ def get_conditions(filters):
 
 
 def get_pos_invoice_data(filters):
+	# Every selected column is grouped or aggregated, so this also runs on PostgreSQL. Where MariaDB used to take
+	# an arbitrary row's value (an invoice's warehouse, cost center or mode of payment), this takes the smallest.
 	conditions = get_conditions(filters)
 	result = frappe.db.sql(
-		""
-		"SELECT "
-		'posting_date, owner, sum(net_total) as "net_total", sum(total_taxes) as "total_taxes", '
-		'sum(paid_amount) as "paid_amount", sum(outstanding_amount) as "outstanding_amount", '
-		"mode_of_payment, warehouse, cost_center "
-		"FROM ("
-		"SELECT "
-		"parent, item_code, warehouse, cost_center "
-		"from `tabSales Invoice Item`  group by parent"
-		") t1 "
-		"left join "
-		"(select parent, mode_of_payment from `tabSales Invoice Payment` group by parent) t3 "
-		"on (t3.parent = t1.parent) "
-		"JOIN ("
-		"SELECT "
-		"docstatus, company, customer, is_pos, name, posting_date, owner, "
-		'sum(base_net_total) as "net_total", sum(base_total_taxes_and_charges) as "total_taxes", '
-		'sum(base_paid_amount - base_change_amount) as "paid_amount", '
-		'sum(outstanding_amount) as "outstanding_amount" '
-		"FROM `tabSales Invoice` "
-		"GROUP BY name"
-		") a "
-		"ON ("
-		"t1.parent = a.name) "
-		"WHERE a.docstatus = 1"
-		f" AND {conditions} "
-		"GROUP BY "
-		"owner, posting_date, warehouse",
+		f"""
+		select
+			posting_date, owner,
+			sum(net_total) as "net_total", sum(total_taxes) as "total_taxes",
+			sum(paid_amount) as "paid_amount", sum(outstanding_amount) as "outstanding_amount",
+			min(mode_of_payment) as "mode_of_payment", warehouse, min(cost_center) as "cost_center"
+		from (
+			select parent, min(warehouse) as warehouse, min(cost_center) as cost_center
+			from `tabSales Invoice Item` group by parent
+		) t1
+		left join (
+			select parent, min(mode_of_payment) as mode_of_payment
+			from `tabSales Invoice Payment` group by parent
+		) t3 on (t3.parent = t1.parent)
+		join (
+			select
+				docstatus, company, customer, is_pos, name, posting_date, owner,
+				base_net_total as "net_total", base_total_taxes_and_charges as "total_taxes",
+				base_paid_amount - base_change_amount as "paid_amount",
+				outstanding_amount as "outstanding_amount"
+			from `tabSales Invoice`
+		) a on (t1.parent = a.name)
+		where a.docstatus = 1
+			and {conditions}
+		group by owner, posting_date, warehouse
+		""",
 		filters,
 		as_dict=1,
 	)
@@ -245,7 +245,7 @@ def get_mode_of_payment_details(filters):
 				where a.name = b.parent
 				and a.docstatus = 1
 				and a.name in ({invoice_list_names})
-				group by a.owner, a.posting_date, mode_of_payment
+				group by a.owner, a.posting_date, ifnull(b.mode_of_payment, '')
 				union all
 				select a.owner,a.posting_date,
 				ifnull(b.mode_of_payment, '') as mode_of_payment,
@@ -256,7 +256,7 @@ def get_mode_of_payment_details(filters):
 				and b.name = c.parent
 				and b.docstatus = 1
 				and a.name in ({invoice_list_names})
-				group by a.owner, a.posting_date, mode_of_payment
+				group by a.owner, a.posting_date, ifnull(b.mode_of_payment, '')
 				union all
 				select si.owner, si.posting_date,
 				ifnull(a.voucher_type,'') as mode_of_payment, sum(b.credit)
@@ -267,7 +267,7 @@ def get_mode_of_payment_details(filters):
 				and a.voucher_type != 'Exchange Gain Or Loss'
 				and b.reference_type = 'Sales Invoice'
 				and b.reference_name in ({invoice_list_names})
-				group by si.owner, si.posting_date, mode_of_payment
+				group by si.owner, si.posting_date, ifnull(a.voucher_type, '')
 			) t
 			group by t.owner, t.posting_date, t.mode_of_payment
 			""",
@@ -282,7 +282,7 @@ def get_mode_of_payment_details(filters):
 			and a.name in ({invoice_list_names})
 			and b.type = 'Cash'
 			and a.base_change_amount > 0
-			group by a.owner, a.posting_date, mode_of_payment""",
+			group by a.owner, a.posting_date, ifnull(b.mode_of_payment, '')""",
 			as_dict=1,
 		)
 
