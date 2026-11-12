@@ -69,15 +69,6 @@ doctype_js = {
 	"Newsletter": "public/js/newsletter.js",
 	"Contact": "public/js/contact.js",
 }
-doctype_list_js = {
-	"Code List": [
-		"edi/doctype/code_list/code_list_import.js",
-	],
-	"Common Code": [
-		"edi/doctype/code_list/code_list_import.js",
-	],
-}
-
 page_js = {"print": "public/js/print.js"}
 
 extend_doctype_class = {"Address": "erpnext.accounts.custom.address.ERPNextAddress"}

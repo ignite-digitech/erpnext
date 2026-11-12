@@ -16,4 +16,3 @@ ERPNext Integrations
 Quality Management
 Bulk Transaction
 Subcontracting
-EDI
