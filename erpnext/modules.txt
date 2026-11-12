@@ -14,8 +14,6 @@ Maintenance
 Regional
 ERPNext Integrations
 Quality Management
-Communication
-Telephony
 Bulk Transaction
 Subcontracting
 EDI

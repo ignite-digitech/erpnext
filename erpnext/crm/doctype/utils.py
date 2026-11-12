@@ -5,62 +5,6 @@ PHONE_NUMBER_MATCH_LENGTH = 10
 MINIMUM_PHONE_NUMBER_LENGTH = 7
 
 
-def get_last_issue_from_customer(customer_name):
-	issues = frappe.get_all(
-		"Issue",
-		{"customer": customer_name},
-		["name", "subject", "customer"],
-		order_by="`creation` DESC",
-		limit=1,
-	)
-
-	return issues[0] if issues else None
-
-
-def get_scheduled_employees_for_popup(communication_medium):
-	if not communication_medium:
-		return []
-
-	medium = frappe.db.get_value(
-		"Communication Medium", communication_medium, ["disabled", "catch_all"], as_dict=True
-	)
-	if medium and medium.disabled:
-		return []
-
-	now_time = frappe.utils.nowtime()
-	weekday = frappe.utils.get_weekday()
-
-	available_employee_groups = frappe.get_all(
-		"Communication Medium Timeslot",
-		filters={
-			"day_of_week": weekday,
-			"parent": communication_medium,
-			"from_time": ["<=", now_time],
-			"to_time": [">=", now_time],
-		},
-		fields=["employee_group"],
-	)
-
-	available_employee_groups = tuple([emp.employee_group for emp in available_employee_groups])
-	if not available_employee_groups and medium and medium.catch_all:
-		available_employee_groups = (medium.catch_all,)
-	if not available_employee_groups:
-		return set()
-
-	member = frappe.qb.DocType("Employee Group Table")
-	employee = frappe.qb.DocType("Employee")
-	return set(
-		frappe.qb.from_(member)
-		.join(employee)
-		.on(member.employee == employee.name)
-		.select(employee.user_id)
-		.where(member.parent.isin(available_employee_groups))
-		.where(employee.status == "Active")
-		.where(employee.user_id.isnotnull() & (employee.user_id != ""))
-		.run(pluck=True)
-	)
-
-
 def strip_number(number: str | None) -> str | None:
 	"""Return only the digits of the number, without leading zeros.
 
